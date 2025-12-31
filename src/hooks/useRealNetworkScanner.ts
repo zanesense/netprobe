@@ -1,7 +1,10 @@
 import { useState, useCallback, useRef } from "react";
-import { DiscoveredHost, PortResult, LogEntry, ScanPhase, DiscoveryMethod, ScanHistoryEntry } from "@/types/scanner";
+import { DiscoveredHost, PortResult, LogEntry, ScanPhase, DiscoveryMethod, ScanHistoryEntry, ServiceInfo, Host, ScriptResult, FirewallInfo } from "@/types/scanner";
 import { networkScanner, PortScanResult, HostDiscoveryResult } from "@/lib/network-scanner";
 import { OSFingerprintEngine, OSFingerprint } from "@/lib/os-fingerprinting";
+import { AdvancedServiceDetector, DetectedService } from "@/lib/advanced-service-detection";
+import { ScriptEngine, SecurityScript, SECURITY_SCRIPTS } from "@/lib/script-engine";
+import { FirewallDetector, FirewallAnalysis } from "@/lib/firewall-detection";
 import { generateId, parseTarget } from "@/lib/scanner-utils";
 
 export function useRealNetworkScanner() {
@@ -199,7 +202,7 @@ export function useRealNetworkScanner() {
     setHistory([]);
   }, []);
 
-  // Service detection using real network scanner
+  // Advanced service detection using real techniques
   const detectServices = useCallback(async (target: string) => {
     if (portResults.length === 0) {
       addLog("No open ports found for service detection", "warning");
@@ -207,25 +210,34 @@ export function useRealNetworkScanner() {
     }
 
     setPhase("detection");
-    addLog("Starting service detection...", "info");
+    addLog("Starting advanced service detection...", "info");
 
     try {
       const openPorts = portResults
         .filter(r => r.status === 'open')
-        .map(r => r.port);
+        .map(r => ({
+          port: r.port,
+          protocol: r.protocol,
+          banner: r.version
+        }));
 
-      const services = await networkScanner.detectServices(target, openPorts);
+      const detectedServices = await AdvancedServiceDetector.detectServices(target, openPorts);
       
-      addLog(`Service detection complete: ${services.length} services identified`, "success");
+      addLog(`Service detection complete: ${detectedServices.length} services identified`, "success");
       setPhase("complete");
       
-      return services.map(service => ({
-        name: service.service,
+      return detectedServices.map((service: DetectedService) => ({
+        name: service.name,
         port: service.port,
-        product: service.banner,
+        product: service.product,
         version: service.version,
-        secure: ['HTTPS', 'SSH', 'IMAPS', 'POP3S', 'SMTPS'].includes(service.service),
+        extraInfo: service.extraInfo,
+        osType: service.osType,
+        deviceType: service.deviceType,
+        banner: service.banner,
+        secure: service.secure,
         confidence: service.confidence,
+        cpe: service.cpe,
       }));
     } catch (error) {
       addLog(`Service detection failed: ${error}`, "error");
@@ -282,6 +294,109 @@ export function useRealNetworkScanner() {
     }
   }, [portResults, discoveredHosts, addLog]);
 
+  // Script scanning using real security scripts
+  const runScripts = useCallback(async (scriptIds: string[], targetHost: string) => {
+    if (portResults.length === 0) {
+      addLog("No open ports found for script scanning", "warning");
+      return [];
+    }
+
+    setPhase("analysis");
+    addLog(`Starting script scan with ${scriptIds.length} scripts...`, "info");
+
+    try {
+      const openPorts = portResults
+        .filter(r => r.status === 'open')
+        .map(r => ({
+          port: r.port,
+          service: r.service
+        }));
+
+      const results = await ScriptEngine.runScripts(
+        scriptIds,
+        targetHost,
+        openPorts,
+        (completed, total) => {
+          const progress = (completed / total) * 100;
+          setProgress(progress);
+          addLog(`Script progress: ${completed}/${total} completed`, "info");
+        },
+        (result) => {
+          if (result.severity === 'high' || result.severity === 'critical') {
+            addLog(`Security finding: ${result.name} - ${result.severity}`, "warning");
+          }
+        }
+      );
+      
+      addLog(`Script scan complete: ${results.length} results`, "success");
+      setPhase("complete");
+      
+      return results;
+    } catch (error) {
+      addLog(`Script scanning failed: ${error}`, "error");
+      setPhase("complete");
+      return [];
+    }
+  }, [portResults, addLog]);
+
+  // Firewall detection using advanced techniques
+  const analyzeFirewall = useCallback(async (target: string) => {
+    if (portResults.length === 0) {
+      addLog("No port scan data available for firewall analysis", "warning");
+      return null;
+    }
+
+    setPhase("analysis");
+    addLog("Starting firewall detection and analysis...", "info");
+
+    try {
+      const analysis = await FirewallDetector.analyzeFirewall(
+        target,
+        portResults,
+        (progress) => {
+          setProgress(progress);
+        }
+      );
+      
+      if (analysis.detected) {
+        addLog(`Firewall detected: ${analysis.type} (${analysis.confidence}% confidence)`, "warning");
+        analysis.indicators.forEach(indicator => {
+          addLog(`Firewall indicator: ${indicator}`, "info");
+        });
+      } else {
+        addLog("No firewall detected or firewall is transparent", "success");
+      }
+      
+      setPhase("complete");
+      return analysis;
+    } catch (error) {
+      addLog(`Firewall analysis failed: ${error}`, "error");
+      setPhase("complete");
+      return null;
+    }
+  }, [portResults, addLog]);
+
+  // Get available security scripts
+  const getAvailableScripts = useCallback(() => {
+    return SECURITY_SCRIPTS;
+  }, []);
+
+  // Get scripts for specific ports
+  const getScriptsForPorts = useCallback((openPorts: Array<{ port: number; service?: string }>) => {
+    const applicableScripts: SecurityScript[] = [];
+    
+    for (const portInfo of openPorts) {
+      const scripts = ScriptEngine.getScriptsForPort(portInfo.port, portInfo.service);
+      scripts.forEach(script => {
+        if (!applicableScripts.find(s => s.id === script.id)) {
+          applicableScripts.push(script);
+        }
+      });
+    }
+    
+    return applicableScripts;
+  }, []);
+
   return {
     isScanning,
     phase,
@@ -298,5 +413,9 @@ export function useRealNetworkScanner() {
     clearHistory,
     detectServices,
     fingerprintOS,
+    runScripts,
+    analyzeFirewall,
+    getAvailableScripts,
+    getScriptsForPorts,
   };
 }

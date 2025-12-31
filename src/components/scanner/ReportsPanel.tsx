@@ -13,22 +13,51 @@ import {
   CheckCircle,
   Info,
   BarChart3,
-  PieChart
+  PieChart,
+  Loader2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ScanResult, Host, PortResult } from "@/types/scanner";
+import { ScanResult, Host, ServiceInfo, Finding } from "@/types/scanner";
+import { ReportGenerator } from "@/lib/report-generator";
+import { toast } from "sonner";
 
 interface ReportsPanelProps {
   scanResult: ScanResult | null;
-  onExport: (format: "json" | "csv" | "pdf") => void;
+  hosts: Host[];
+  services: ServiceInfo[];
+  findings: Finding[];
+  onExport?: (format: "json" | "csv" | "pdf") => void;
 }
 
-export function ReportsPanel({ scanResult, onExport }: ReportsPanelProps) {
+export function ReportsPanel({ scanResult, hosts, services, findings, onExport }: ReportsPanelProps) {
   const [activeView, setActiveView] = useState("summary");
+  const [isGenerating, setIsGenerating] = useState<string | null>(null);
+
+  const handleExport = async (format: "json" | "csv" | "pdf") => {
+    if (!scanResult) {
+      toast.error("No scan data available for export");
+      return;
+    }
+
+    setIsGenerating(format);
+    
+    try {
+      await ReportGenerator.generateReport(format, scanResult, hosts, services, findings);
+      toast.success(`${format.toUpperCase()} report generated successfully`);
+      
+      // Call the optional onExport callback
+      onExport?.(format);
+    } catch (error) {
+      console.error(`Error generating ${format} report:`, error);
+      toast.error(`Failed to generate ${format.toUpperCase()} report`);
+    } finally {
+      setIsGenerating(null);
+    }
+  };
 
   if (!scanResult) {
     return (
@@ -49,12 +78,12 @@ export function ReportsPanel({ scanResult, onExport }: ReportsPanelProps) {
     );
   }
 
-  const openPorts = scanResult.ports.filter(p => p.state === "open");
-  const filteredPorts = scanResult.ports.filter(p => p.state === "filtered");
+  const openPorts = scanResult.ports.filter(p => p.status === "open");
+  const filteredPorts = scanResult.ports.filter(p => p.status === "filtered");
   const severityCounts = {
-    info: scanResult.findings.filter(f => f.severity === "info").length,
-    low: scanResult.findings.filter(f => f.severity === "low").length,
-    medium: scanResult.findings.filter(f => f.severity === "medium").length,
+    info: findings.filter(f => f.severity === "info").length,
+    low: findings.filter(f => f.severity === "low").length,
+    medium: findings.filter(f => f.severity === "medium").length,
   };
 
   return (
@@ -71,16 +100,42 @@ export function ReportsPanel({ scanResult, onExport }: ReportsPanelProps) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => onExport("json")}>
-            <FileJson className="h-4 w-4 mr-2" />
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => handleExport("json")}
+            disabled={isGenerating !== null}
+          >
+            {isGenerating === "json" ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <FileJson className="h-4 w-4 mr-2" />
+            )}
             JSON
           </Button>
-          <Button variant="outline" size="sm" onClick={() => onExport("csv")}>
-            <FileSpreadsheet className="h-4 w-4 mr-2" />
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => handleExport("csv")}
+            disabled={isGenerating !== null}
+          >
+            {isGenerating === "csv" ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+            )}
             CSV
           </Button>
-          <Button size="sm" onClick={() => onExport("pdf")}>
-            <File className="h-4 w-4 mr-2" />
+          <Button 
+            size="sm" 
+            onClick={() => handleExport("pdf")}
+            disabled={isGenerating !== null}
+          >
+            {isGenerating === "pdf" ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <File className="h-4 w-4 mr-2" />
+            )}
             PDF Report
           </Button>
         </div>
@@ -95,7 +150,7 @@ export function ReportsPanel({ scanResult, onExport }: ReportsPanelProps) {
                 <Target className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{scanResult.hosts.length}</p>
+                <p className="text-2xl font-bold">{hosts.length}</p>
                 <p className="text-xs text-muted-foreground">Hosts Discovered</p>
               </div>
             </div>
@@ -121,7 +176,7 @@ export function ReportsPanel({ scanResult, onExport }: ReportsPanelProps) {
                 <AlertTriangle className="h-5 w-5 text-warning" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{scanResult.findings.length}</p>
+                <p className="text-2xl font-bold">{findings.length}</p>
                 <p className="text-xs text-muted-foreground">Findings</p>
               </div>
             </div>
@@ -241,7 +296,7 @@ export function ReportsPanel({ scanResult, onExport }: ReportsPanelProps) {
           <Card>
             <CardContent className="pt-6">
               <ScrollArea className="h-[400px]">
-                {scanResult.findings.length === 0 ? (
+                {findings.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <CheckCircle className="h-12 w-12 text-success mb-4" />
                     <h3 className="font-medium">No Issues Found</h3>
@@ -251,7 +306,7 @@ export function ReportsPanel({ scanResult, onExport }: ReportsPanelProps) {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {scanResult.findings.map((finding, index) => (
+                    {findings.map((finding, index) => (
                       <div
                         key={index}
                         className="p-4 rounded-lg border border-border"
@@ -303,7 +358,7 @@ export function ReportsPanel({ scanResult, onExport }: ReportsPanelProps) {
             <CardContent className="pt-6">
               <ScrollArea className="h-[400px]">
                 <div className="space-y-2">
-                  {scanResult.hosts.map((host, index) => (
+                  {hosts.map((host, index) => (
                     <div
                       key={host.ip}
                       className="flex items-center justify-between p-3 rounded-lg border border-border"
@@ -324,7 +379,7 @@ export function ReportsPanel({ scanResult, onExport }: ReportsPanelProps) {
                           <Badge variant="outline">{host.osInfo.name}</Badge>
                         )}
                         <Badge variant="secondary">
-                          {host.ports.filter(p => p.state === "open").length} open ports
+                          {host.ports.filter(p => p.status === "open").length} open ports
                         </Badge>
                       </div>
                     </div>
@@ -340,7 +395,7 @@ export function ReportsPanel({ scanResult, onExport }: ReportsPanelProps) {
             <CardContent className="pt-6">
               <ScrollArea className="h-[400px]">
                 <div className="space-y-2">
-                  {scanResult.services.map((service, index) => (
+                  {services.map((service, index) => (
                     <div
                       key={`${service.port}-${index}`}
                       className="flex items-center justify-between p-3 rounded-lg border border-border"
@@ -358,11 +413,16 @@ export function ReportsPanel({ scanResult, onExport }: ReportsPanelProps) {
                           )}
                         </div>
                       </div>
-                      {service.secure && (
-                        <Badge variant="secondary" className="text-success">
-                          Encrypted
+                      <div className="flex items-center gap-2">
+                        {service.secure && (
+                          <Badge variant="secondary" className="text-success">
+                            Encrypted
+                          </Badge>
+                        )}
+                        <Badge variant="outline" className="text-xs">
+                          {service.confidence}% confidence
                         </Badge>
-                      )}
+                      </div>
                     </div>
                   ))}
                 </div>

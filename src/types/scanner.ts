@@ -152,20 +152,22 @@ export type ScriptCategory =
   | "safe" 
   | "intrusive" 
   | "vuln" 
-  | "default";
+  | "default"
+  | "malware";
 
 export interface ScriptResult {
   id: string;
   scriptId: string;
   name: string;
-  category: ScriptCategory;
-  port: number;
+  category: string;
+  port?: number;
   host: string;
   output: string;
-  severity: "info" | "low" | "medium";
+  severity: "info" | "low" | "medium" | "high" | "critical";
   duration: number;
   timestamp: Date;
   findings?: ScriptFinding[];
+  state?: 'success' | 'error' | 'timeout' | 'filtered';
 }
 
 export interface ScriptFinding {

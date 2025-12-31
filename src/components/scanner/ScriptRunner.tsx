@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   FileCode, 
@@ -11,7 +11,9 @@ import {
   ChevronRight,
   Shield,
   FolderOpen,
-  Lock
+  Lock,
+  AlertCircle,
+  XCircle
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,63 +22,55 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ScriptResult } from "@/types/scanner";
+import { SecurityScript } from "@/lib/script-engine";
 
 interface ScriptRunnerProps {
   scriptResults: ScriptResult[];
   isRunning: boolean;
+  availableScripts: SecurityScript[];
   onRunScripts: (scriptIds: string[]) => void;
 }
-
-const SCRIPT_CATEGORIES = [
-  {
-    id: "auth",
-    name: "Authentication Checks",
-    icon: Lock,
-    scripts: [
-      { id: "anon-ftp", name: "Anonymous FTP Check", description: "Tests for anonymous FTP access" },
-      { id: "default-creds", name: "Default Credentials", description: "Checks for default login credentials" },
-    ],
-  },
-  {
-    id: "config",
-    name: "Configuration Analysis",
-    icon: Shield,
-    scripts: [
-      { id: "ssl-cert", name: "SSL Certificate Info", description: "Retrieves SSL/TLS certificate details" },
-      { id: "http-headers", name: "HTTP Security Headers", description: "Analyzes HTTP security headers" },
-      { id: "ssh-auth", name: "SSH Auth Methods", description: "Enumerates SSH authentication methods" },
-    ],
-  },
-  {
-    id: "info",
-    name: "Information Disclosure",
-    icon: Info,
-    scripts: [
-      { id: "http-title", name: "HTTP Page Title", description: "Extracts web page titles" },
-      { id: "robots-txt", name: "Robots.txt", description: "Retrieves robots.txt content" },
-      { id: "server-info", name: "Server Information", description: "Gathers server version info" },
-    ],
-  },
-  {
-    id: "discovery",
-    name: "Service Discovery",
-    icon: FolderOpen,
-    scripts: [
-      { id: "http-enum", name: "HTTP Enumeration", description: "Discovers common web paths" },
-      { id: "dns-records", name: "DNS Records", description: "Retrieves DNS record information" },
-    ],
-  },
-];
 
 const SEVERITY_STYLES = {
   info: { icon: Info, color: "text-blue-400", bg: "bg-blue-500/10" },
   low: { icon: CheckCircle, color: "text-success", bg: "bg-success/10" },
   medium: { icon: AlertTriangle, color: "text-warning", bg: "bg-warning/10" },
+  high: { icon: AlertCircle, color: "text-orange-500", bg: "bg-orange-500/10" },
+  critical: { icon: XCircle, color: "text-destructive", bg: "bg-destructive/10" },
 };
 
-export function ScriptRunner({ scriptResults, isRunning, onRunScripts }: ScriptRunnerProps) {
+const CATEGORY_ICONS: Record<string, any> = {
+  auth: Lock,
+  discovery: FolderOpen,
+  safe: Shield,
+  intrusive: AlertTriangle,
+  vuln: AlertCircle,
+  default: FileCode,
+  malware: XCircle
+};
+
+export function ScriptRunner({ scriptResults, isRunning, availableScripts, onRunScripts }: ScriptRunnerProps) {
   const [selectedScripts, setSelectedScripts] = useState<string[]>([]);
-  const [expandedCategories, setExpandedCategories] = useState<string[]>(["auth"]);
+  const [expandedCategories, setExpandedCategories] = useState<string[]>(["safe"]);
+
+  // Group scripts by category
+  const scriptsByCategory = availableScripts.reduce((acc, script) => {
+    if (!acc[script.category]) {
+      acc[script.category] = [];
+    }
+    acc[script.category].push(script);
+    return acc;
+  }, {} as Record<string, SecurityScript[]>);
+
+  // Auto-select safe scripts by default
+  useEffect(() => {
+    if (selectedScripts.length === 0 && availableScripts.length > 0) {
+      const safeScripts = availableScripts
+        .filter(script => script.category === 'safe')
+        .map(script => script.id);
+      setSelectedScripts(safeScripts);
+    }
+  }, [availableScripts, selectedScripts.length]);
 
   const toggleScript = (scriptId: string) => {
     setSelectedScripts(prev => 
@@ -95,16 +89,27 @@ export function ScriptRunner({ scriptResults, isRunning, onRunScripts }: ScriptR
   };
 
   const selectAllInCategory = (categoryId: string) => {
-    const category = SCRIPT_CATEGORIES.find(c => c.id === categoryId);
-    if (category) {
-      const scriptIds = category.scripts.map(s => s.id);
-      const allSelected = scriptIds.every(id => selectedScripts.includes(id));
-      if (allSelected) {
-        setSelectedScripts(prev => prev.filter(id => !scriptIds.includes(id)));
-      } else {
-        setSelectedScripts(prev => [...new Set([...prev, ...scriptIds])]);
-      }
+    const scripts = scriptsByCategory[categoryId] || [];
+    const scriptIds = scripts.map(s => s.id);
+    const allSelected = scriptIds.every(id => selectedScripts.includes(id));
+    if (allSelected) {
+      setSelectedScripts(prev => prev.filter(id => !scriptIds.includes(id)));
+    } else {
+      setSelectedScripts(prev => [...new Set([...prev, ...scriptIds])]);
     }
+  };
+
+  const getCategoryName = (category: string): string => {
+    const names: Record<string, string> = {
+      auth: 'Authentication',
+      discovery: 'Discovery',
+      safe: 'Safe Checks',
+      intrusive: 'Intrusive',
+      vuln: 'Vulnerability',
+      default: 'Default',
+      malware: 'Malware Detection'
+    };
+    return names[category] || category.charAt(0).toUpperCase() + category.slice(1);
   };
 
   return (
@@ -138,19 +143,18 @@ export function ScriptRunner({ scriptResults, isRunning, onRunScripts }: ScriptR
           <CardContent>
             <ScrollArea className="h-[400px] pr-4">
               <div className="space-y-2">
-                {SCRIPT_CATEGORIES.map((category) => {
-                  const CategoryIcon = category.icon;
-                  const isExpanded = expandedCategories.includes(category.id);
-                  const categoryScriptIds = category.scripts.map(s => s.id);
-                  const selectedCount = categoryScriptIds.filter(id => 
-                    selectedScripts.includes(id)
+                {Object.entries(scriptsByCategory).map(([categoryId, scripts]) => {
+                  const CategoryIcon = CATEGORY_ICONS[categoryId] || FileCode;
+                  const isExpanded = expandedCategories.includes(categoryId);
+                  const selectedCount = scripts.filter(script => 
+                    selectedScripts.includes(script.id)
                   ).length;
 
                   return (
-                    <Collapsible key={category.id} open={isExpanded}>
+                    <Collapsible key={categoryId} open={isExpanded}>
                       <div className="flex items-center gap-2 p-2 rounded-md hover:bg-secondary/50">
                         <CollapsibleTrigger 
-                          onClick={() => toggleCategory(category.id)}
+                          onClick={() => toggleCategory(categoryId)}
                           className="flex items-center gap-2 flex-1"
                         >
                           {isExpanded ? (
@@ -159,7 +163,7 @@ export function ScriptRunner({ scriptResults, isRunning, onRunScripts }: ScriptR
                             <ChevronRight className="h-4 w-4 text-muted-foreground" />
                           )}
                           <CategoryIcon className="h-4 w-4 text-primary" />
-                          <span className="text-sm font-medium">{category.name}</span>
+                          <span className="text-sm font-medium">{getCategoryName(categoryId)}</span>
                         </CollapsibleTrigger>
                         {selectedCount > 0 && (
                           <Badge variant="secondary" className="text-xs">
@@ -170,14 +174,14 @@ export function ScriptRunner({ scriptResults, isRunning, onRunScripts }: ScriptR
                           variant="ghost"
                           size="sm"
                           className="h-6 text-xs"
-                          onClick={() => selectAllInCategory(category.id)}
+                          onClick={() => selectAllInCategory(categoryId)}
                         >
-                          {selectedCount === category.scripts.length ? "None" : "All"}
+                          {selectedCount === scripts.length ? "None" : "All"}
                         </Button>
                       </div>
                       <CollapsibleContent>
                         <div className="ml-6 space-y-1 mt-1">
-                          {category.scripts.map((script) => (
+                          {scripts.map((script) => (
                             <div
                               key={script.id}
                               className="flex items-start gap-3 p-2 rounded-md hover:bg-secondary/30 cursor-pointer"
@@ -192,6 +196,14 @@ export function ScriptRunner({ scriptResults, isRunning, onRunScripts }: ScriptR
                                 <p className="text-xs text-muted-foreground">
                                   {script.description}
                                 </p>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge variant="outline" className="text-xs">
+                                    {script.category}
+                                  </Badge>
+                                  <span className="text-xs text-muted-foreground">
+                                    by {script.author}
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           ))}
@@ -239,19 +251,40 @@ export function ScriptRunner({ scriptResults, isRunning, onRunScripts }: ScriptR
                             <div className={`p-1.5 rounded ${severity.bg}`}>
                               <SeverityIcon className={`h-4 w-4 ${severity.color}`} />
                             </div>
-                            <div className="flex-1 min-w-0">
+                          <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium text-sm">{result.scriptId}</span>
+                                <span className="font-medium text-sm">{result.name}</span>
                                 <Badge variant="outline" className="text-xs font-mono">
-                                  {result.host}:{result.port}
+                                  {result.host}{result.port ? `:${result.port}` : ''}
+                                </Badge>
+                                <Badge 
+                                  variant={result.severity === 'critical' || result.severity === 'high' ? 'destructive' : 'default'} 
+                                  className="text-xs"
+                                >
+                                  {result.severity}
                                 </Badge>
                               </div>
-                              <p className="text-sm text-muted-foreground mb-2">
+                              <p className="text-sm text-muted-foreground mb-2 whitespace-pre-wrap">
                                 {result.output}
                               </p>
+                              {result.findings && result.findings.length > 0 && (
+                                <div className="mb-2 space-y-1">
+                                  {result.findings.map((finding, idx) => (
+                                    <div key={idx} className="p-2 rounded bg-secondary/30 text-xs">
+                                      <div className="font-medium text-warning">{finding.title}</div>
+                                      <div className="text-muted-foreground">{finding.description}</div>
+                                      {finding.remediation && (
+                                        <div className="text-primary mt-1">Fix: {finding.remediation}</div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                 <Clock className="h-3 w-3" />
                                 <span>{result.duration}ms</span>
+                                <span>•</span>
+                                <span>{result.timestamp.toLocaleTimeString()}</span>
                               </div>
                             </div>
                           </div>

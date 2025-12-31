@@ -42,7 +42,7 @@ const Index = () => {
   const [firewallInfo, setFirewallInfo] = useState<FirewallInfo | null>(null);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
 
-  const { isScanning, phase, progress, currentPort, elapsedTime, discoveredHosts, portResults, logs, history, realHostDiscovery, realPortScan, stopScan, clearHistory, detectServices, fingerprintOS } = useRealNetworkScanner();
+  const { isScanning, phase, progress, currentPort, elapsedTime, discoveredHosts, portResults, logs, history, realHostDiscovery, realPortScan, stopScan, clearHistory, detectServices, fingerprintOS, runScripts, analyzeFirewall, getAvailableScripts, getScriptsForPorts } = useRealNetworkScanner();
 
   // Check compliance status on mount
   useEffect(() => {
@@ -150,48 +150,51 @@ const Index = () => {
     }
   };
 
-  const handleRunScripts = (scriptIds: string[]) => {
-    toast.info(`Running ${scriptIds.length} scripts...`);
-    const results: ScriptResult[] = scriptIds.map((id, i) => ({
-      id: `result-${i}`,
-      scriptId: id,
-      name: id,
-      category: "safe" as const,
-      port: 80,
-      host: target || "192.168.1.1",
-      output: `Script ${id} completed successfully. No issues found.`,
-      severity: "info" as const,
-      duration: 50 + Math.floor(Math.random() * 200),
-      timestamp: new Date(),
-    }));
-    setScriptResults(results);
-    toast.success(`Completed ${results.length} script checks`);
+  const handleRunScripts = async (scriptIds: string[]) => {
+    if (!target.trim()) {
+      toast.error("Please specify a target first");
+      return;
+    }
+    
+    toast.info(`Running ${scriptIds.length} security scripts...`);
+    try {
+      const results = await runScripts(scriptIds, target);
+      setScriptResults(results as ScriptResult[]);
+      toast.success(`Completed ${results.length} script checks`);
+    } catch (error) {
+      toast.error("Script execution failed");
+    }
   };
 
-  const handleAnalyzeFirewall = () => {
+  const handleAnalyzeFirewall = async () => {
+    if (!target.trim()) {
+      toast.error("Please specify a target first");
+      return;
+    }
+    
     toast.info("Analyzing firewall behavior...");
-    const filtered = portResults.filter(p => p.status === "filtered").length;
-    setFirewallInfo({
-      detected: filtered > 5,
-      type: filtered > 5 ? "Stateful Packet Filter" : undefined,
-      confidence: Math.min(95, 50 + filtered * 5),
-      indicators: filtered > 5 ? [
-        "Multiple filtered ports detected",
-        "Consistent response timing on blocked ports",
-        "ICMP unreachable responses observed",
-      ] : ["No significant filtering detected"],
-      avgResponseTime: 45 + Math.floor(Math.random() * 30),
-      responseVariance: 12 + Math.floor(Math.random() * 20),
-      rateLimitDetected: Math.random() > 0.7,
-      droppedPackets: filtered,
-      resetResponses: Math.floor(filtered * 0.3),
-      icmpUnreachable: Math.floor(filtered * 0.5),
-    });
-    toast.success("Firewall analysis complete");
+    try {
+      const analysis = await analyzeFirewall(target);
+      setFirewallInfo(analysis);
+      if (analysis?.detected) {
+        toast.success(`Firewall detected: ${analysis.type}`);
+      } else {
+        toast.success("Firewall analysis complete");
+      }
+    } catch (error) {
+      toast.error("Firewall analysis failed");
+    }
   };
 
-  const handleExport = (format: "json" | "csv" | "pdf") => {
-    toast.success(`Exporting report as ${format.toUpperCase()}...`);
+  const handleExport = async (format: "json" | "csv" | "pdf") => {
+    if (!scanResult) {
+      toast.error("No scan data available for export");
+      return;
+    }
+    
+    // This will be handled by the ReportsPanel component
+    // Just show a toast for now
+    toast.success(`${format.toUpperCase()} export initiated`);
   };
 
   // Build scan result for reports
@@ -289,6 +292,7 @@ const Index = () => {
               <ScriptRunner 
                 scriptResults={scriptResults} 
                 isRunning={isScanning} 
+                availableScripts={getAvailableScripts()}
                 onRunScripts={handleRunScripts} 
               />
             )}
@@ -305,6 +309,9 @@ const Index = () => {
             {activeTab === "reports" && (
               <ReportsPanel 
                 scanResult={scanResult} 
+                hosts={hosts}
+                services={services}
+                findings={scanResult?.findings || []}
                 onExport={handleExport} 
               />
             )}
