@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { 
   Radar, 
   Terminal, 
@@ -12,9 +12,13 @@ import {
   FileText,
   Settings,
   Command,
-  Clock,
+  Globe,
+  LogIn,
+  Database
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { UserMenu } from "@/components/auth/UserMenu";
+import { useAuth } from "@/hooks/useAuth";
 import { ScanPhase } from "@/types/scanner";
 
 interface DashboardHeaderProps {
@@ -22,15 +26,18 @@ interface DashboardHeaderProps {
   onTabChange: (tab: string) => void;
   currentPhase: ScanPhase;
   onOpenCommandPalette: () => void;
+  onOpenAuth?: () => void;
 }
 
 const TABS = [
   { id: "discovery", label: "Discovery", icon: Network },
+  { id: "resolver", label: "DNS Resolver", icon: Globe },
   { id: "ports", label: "Port Scan", icon: ScanLine },
   { id: "services", label: "Services", icon: Search },
   { id: "fingerprint", label: "OS/Device", icon: Fingerprint },
   { id: "scripts", label: "Scripts", icon: FileCode },
   { id: "firewall", label: "Firewall", icon: ShieldAlert },
+  { id: "saved", label: "Saved Scans", icon: Database },
   { id: "reports", label: "Reports", icon: FileText },
   { id: "settings", label: "Settings", icon: Settings },
 ];
@@ -44,7 +51,9 @@ const PHASE_LABELS: Record<ScanPhase, string> = {
   complete: "Complete",
 };
 
-export function DashboardHeader({ activeTab, onTabChange, currentPhase, onOpenCommandPalette }: DashboardHeaderProps) {
+export function DashboardHeader({ activeTab, onTabChange, currentPhase, onOpenCommandPalette, onOpenAuth }: DashboardHeaderProps) {
+  const { user, loading } = useAuth();
+
   return (
     <motion.header
       initial={{ opacity: 0, y: -20 }}
@@ -68,7 +77,6 @@ export function DashboardHeader({ activeTab, onTabChange, currentPhase, onOpenCo
               <h1 className="text-xl font-semibold tracking-tight">
                 <span className="text-primary text-glow">Net</span>
                 <span className="text-foreground">Probe</span>
-                <span className="text-muted-foreground ml-2 text-sm font-normal">Pro</span>
               </h1>
               <p className="text-xs text-muted-foreground font-mono">
                 Network Security Assessment Tool
@@ -107,10 +115,36 @@ export function DashboardHeader({ activeTab, onTabChange, currentPhase, onOpenCo
               </span>
             </div>
 
+            {/* Authentication */}
+            {!loading && (
+              user ? (
+                <UserMenu />
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onOpenAuth}
+                  className="flex items-center gap-2"
+                >
+                  <LogIn className="h-4 w-4" />
+                  <span className="hidden sm:inline">Sign In</span>
+                </Button>
+              )
+            )}
+
             {/* Version Badge */}
             <div className="hidden lg:flex items-center gap-2 text-xs text-muted-foreground font-mono">
               <Terminal className="h-3.5 w-3.5" />
               <span>v3.0.0</span>
+              <span>•</span>
+              <a 
+                href="https://github.com/zanesense" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="hover:text-primary transition-colors"
+              >
+                @zanesense
+              </a>
             </div>
 
             {/* Security Mode */}

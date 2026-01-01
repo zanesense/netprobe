@@ -4,24 +4,70 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NetProbe - Advanced Port Scanner</title>
-    <meta name="description" content="NetProbe is a powerful, visual port scanner with TCP, SYN, and UDP scanning capabilities. Scan networks with a beautiful dark-themed interface." />
+    <title>NetProbe - Advanced Network Security Scanner</title>
+    <meta name="description" content="NetProbe is a powerful, visual network security scanner with comprehensive scanning capabilities. Secure your network with advanced assessment tools." />
     <meta name="author" content="NetProbe" />
-    <meta name="keywords" content="port scanner, network security, TCP scan, nmap alternative, security tool" />
+    <meta name="keywords" content="network security, port scanner, vulnerability assessment, security tool, network analysis" />
     <meta name="theme-color" content="#000000" />
 
-    <meta property="og:title" content="NetProbe - Advanced Port Scanner" />
-    <meta property="og:description" content="Powerful network port scanner with real-time results and service detection" />
+    <!-- Preload critical resources -->
+    <link rel="preload" href="/src/main.tsx" as="script" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <!-- DNS prefetch for external resources -->
+    <link rel="dns-prefetch" href="//firebase.googleapis.com" />
+    <link rel="dns-prefetch" href="//firestore.googleapis.com" />
+
+    <meta property="og:title" content="NetProbe - Advanced Network Security Scanner" />
+    <meta property="og:description" content="Comprehensive network security assessment with real-time scanning and vulnerability detection" />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="/favicon.svg" />
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@NetProbe" />
     <meta name="twitter:image" content="/favicon.svg" />
+
+    <!-- Loading styles to prevent FOUC -->
+    <style>
+      #root {
+        min-height: 100vh;
+        background: hsl(222.2 84% 4.9%);
+        color: hsl(210 40% 98%);
+      }
+      
+      .loading-screen {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: hsl(222.2 84% 4.9%);
+        z-index: 9999;
+      }
+      
+      .loading-spinner {
+        width: 3rem;
+        height: 3rem;
+        border: 2px solid hsl(217.2 32.6% 17.5%);
+        border-top: 2px solid hsl(142.1 76.2% 36.3%);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    </style>
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="loading-screen">
+        <div class="loading-spinner"></div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

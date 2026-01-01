@@ -46,6 +46,12 @@ export function ReportsPanel({ scanResult, hosts, services, findings, onExport }
     setIsGenerating(format);
     
     try {
+      console.log(`Starting ${format} report generation...`);
+      console.log('Scan result:', scanResult);
+      console.log('Hosts:', hosts);
+      console.log('Services:', services);
+      console.log('Findings:', findings);
+      
       await ReportGenerator.generateReport(format, scanResult, hosts, services, findings);
       toast.success(`${format.toUpperCase()} report generated successfully`);
       
@@ -53,7 +59,15 @@ export function ReportsPanel({ scanResult, hosts, services, findings, onExport }
       onExport?.(format);
     } catch (error) {
       console.error(`Error generating ${format} report:`, error);
-      toast.error(`Failed to generate ${format.toUpperCase()} report`);
+      
+      // More detailed error message
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast.error(`Failed to generate ${format.toUpperCase()} report: ${errorMessage}`);
+      
+      // If it's a PDF generation error, suggest trying other formats
+      if (format === 'pdf') {
+        toast.info("Try exporting as JSON or CSV if PDF generation continues to fail");
+      }
     } finally {
       setIsGenerating(null);
     }
@@ -138,6 +152,23 @@ export function ReportsPanel({ scanResult, hosts, services, findings, onExport }
             )}
             PDF Report
           </Button>
+          {process.env.NODE_ENV === 'development' && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={async () => {
+                try {
+                  await ReportGenerator.testPDFGeneration();
+                  toast.success("PDF test successful");
+                } catch (error) {
+                  toast.error("PDF test failed");
+                  console.error("PDF test error:", error);
+                }
+              }}
+            >
+              Test PDF
+            </Button>
+          )}
         </div>
       </div>
 

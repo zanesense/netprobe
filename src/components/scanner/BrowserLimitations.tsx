@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { AlertTriangle, Info, Shield, Zap } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { DismissibleAlert } from "@/components/ui/dismissible-alert";
 
 export function BrowserLimitations() {
   return (
@@ -9,13 +9,13 @@ export function BrowserLimitations() {
       animate={{ opacity: 1, y: 0 }}
       className="space-y-4 mb-6"
     >
-      <Alert className="border-warning/30 bg-warning/10">
-        <AlertTriangle className="h-4 w-4 text-warning" />
-        <AlertDescription className="text-sm">
-          <strong>Browser Security Limitations:</strong> Due to browser security policies, 
-          some scanning features are limited compared to native tools like Nmap.
-        </AlertDescription>
-      </Alert>
+      <DismissibleAlert 
+        id="browser-security-warning"
+        className="border-warning/30 bg-warning/10"
+        icon={<AlertTriangle className="h-4 w-4 text-warning" />}
+        description="Due to browser security policies, some scanning features are limited compared to native tools like Nmap."
+        title="Browser Security Limitations"
+      />
 
       <div className="grid md:grid-cols-2 gap-4">
         <div className="p-4 rounded-lg bg-card border border-border">
@@ -29,6 +29,7 @@ export function BrowserLimitations() {
             <li>• Service banner grabbing (HTTP)</li>
             <li>• Basic host reachability</li>
             <li>• Connection timing analysis</li>
+            <li>• DNS resolution with multiple methods</li>
           </ul>
         </div>
 
@@ -47,13 +48,13 @@ export function BrowserLimitations() {
         </div>
       </div>
 
-      <Alert className="border-primary/30 bg-primary/10">
-        <Zap className="h-4 w-4 text-primary" />
-        <AlertDescription className="text-sm">
-          <strong>For Advanced Scanning:</strong> Consider using native tools like Nmap, 
-          Masscan, or Zmap for comprehensive network reconnaissance and security testing.
-        </AlertDescription>
-      </Alert>
+      <DismissibleAlert 
+        id="advanced-scanning-recommendation"
+        className="border-primary/30 bg-primary/10"
+        icon={<Zap className="h-4 w-4 text-primary" />}
+        description="Consider using native tools like Nmap, Masscan, or Zmap for comprehensive network reconnaissance and security testing."
+        title="For Advanced Scanning"
+      />
     </motion.div>
   );
 }

@@ -14,4 +14,27 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+          ui: ['framer-motion', 'lucide-react'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1000,
+  },
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'firebase/app',
+      'firebase/auth',
+      'firebase/firestore',
+      'framer-motion',
+      'lucide-react',
+    ],
+  },
 }));

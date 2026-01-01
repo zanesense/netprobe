@@ -1,258 +1,147 @@
-# 🎯 NetProbe - Advanced Network Security Scanner
+# 🎯 NetProbe - Network Security Assessment Tool
 
 <div align="center">
 
-![NetProbe Logo](public/favicon.svg)
-
-**Professional-grade network reconnaissance and security assessment tool built for the modern web**
+**Professional network reconnaissance and security assessment tool with cloud data persistence**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-20232A?logo=react&logoColor=61DAFB)](https://reactjs.org/)
-[![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![Firebase](https://img.shields.io/badge/Firebase-FFCA28?logo=firebase&logoColor=black)](https://firebase.google.com/)
 
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/zanesense/netprobe)
-[![Security](https://img.shields.io/badge/security-compliant-green)](https://github.com/zanesense/netprobe)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
-[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/zanesense/netprobe/graphs/commit-activity)
-
-[🚀 Live Demo](https://netprobe-demo.vercel.app) • [📖 Documentation](https://docs.netprobe.dev) • [🐛 Report Bug](https://github.com/zanesense/netprobe/issues) • [💡 Request Feature](https://github.com/zanesense/netprobe/issues)
+[🚀 Live Demo](https://netprobe.vercel.app) • [📖 Documentation](.docs/) • [🐛 Report Issues](https://github.com/zanesense/netprobe/issues)
 
 </div>
 
 ---
 
-## ✨ Features
+## ✨ What is NetProbe?
 
-<table>
-<tr>
-<td width="50%">
+NetProbe is a **browser-based network security assessment tool** that allows security professionals and network administrators to perform comprehensive network reconnaissance safely and legally. Built with modern web technologies, it provides enterprise-grade scanning capabilities with cloud data persistence.
 
-### 🔍 **Core Scanning**
-- **Real Port Scanning** - TCP Connect, SYN, UDP, ACK
-- **Host Discovery** - ICMP, ARP, TCP probes
-- **Service Detection** - Banner grabbing & fingerprinting
-- **OS Fingerprinting** - Multi-method identification
-- **Firewall Detection** - Advanced filtering analysis
+### 🎯 **Key Features**
 
-</td>
-<td width="50%">
-
-### 🎨 **User Experience**
-- **Real-time Results** - Live scanning progress
-- **Professional UI** - Dark theme with animations
-- **Command Palette** - Quick actions (⌘K)
-- **Export Reports** - JSON, CSV, PDF formats
-- **Scan History** - Persistent result storage
-
-</td>
-</tr>
-</table>
-
-### 🛡️ **Security & Compliance**
-- **Legal Compliance** - Built-in authorization notices
-- **Audit Logging** - Complete activity tracking
-- **Safe by Design** - Read-only operations
-- **Browser Security** - Respects CORS and CSP policies
+- **🔐 Secure Authentication** - Sign up with email or social providers (Google, GitHub)
+- **🔍 Network Scanning** - Port scanning, host discovery, service detection
+- **💾 Cloud Storage** - All scan results automatically saved to your account
+- **📊 Professional Reports** - Export results in PDF, CSV, or JSON formats
+- **🌐 Cross-Device Access** - Access your scans from anywhere
+- **🛡️ Security Focused** - Built for authorized testing with compliance features
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Getting Started
 
-### Prerequisites
-- **Node.js** 18+ and npm
-- Modern web browser with WebSocket support
+### 1. **Access NetProbe**
+Visit the application and create your account:
+- **Sign up** with email and password
+- **Or use social login** (Google/GitHub)
+- **Verify your email** to access all features
 
-### Installation
+### 2. **Start Scanning**
+```
+1. Enter target: 192.168.1.1 or example.com
+2. Set port range: 1-1000  
+3. Choose scan type: TCP Connect
+4. Click "Start Scan" 🚀
+```
 
+### 3. **View Results**
+- **Real-time progress** with live updates
+- **Detailed results** showing open ports and services
+- **Automatic saving** to your cloud account
+- **Export reports** in multiple formats
+
+---
+
+## 🔧 Core Capabilities
+
+### **Network Scanning**
+- **Port Scanning** - TCP Connect, SYN, UDP scanning methods
+- **Host Discovery** - Multiple discovery techniques (ICMP, TCP, ARP)
+- **Service Detection** - Identify services running on open ports
+- **OS Fingerprinting** - Determine target operating systems
+- **DNS Resolution** - Comprehensive hostname lookup
+
+### **Security Analysis**
+- **Firewall Detection** - Identify filtering and security measures
+- **Security Scripts** - Run automated security checks
+- **Vulnerability Assessment** - Basic security posture analysis
+- **Compliance Reporting** - Generate professional security reports
+
+### **Data Management**
+- **Cloud Storage** - All scans saved to Firebase Firestore
+- **Scan History** - Access previous scans across devices
+- **User Profiles** - Personalized settings and preferences
+- **Export Options** - PDF, CSV, JSON report formats
+
+---
+
+## 🛡️ Security & Compliance
+
+### **Legal Use Only**
+⚖️ **IMPORTANT**: NetProbe is designed for **authorized security testing only**. Users must:
+- Own the target systems OR have explicit written permission
+- Comply with all local laws and regulations
+- Use responsibly for legitimate security purposes only
+
+### **Built-in Safety**
+- **Authorization Notices** - Required compliance acceptance
+- **Audit Logging** - Complete activity tracking
+- **Safe Operations** - Read-only scanning, no exploitation
+- **Rate Limiting** - Prevents overwhelming target systems
+
+---
+
+## 🏗️ For Developers
+
+### **Local Development**
 ```bash
-# Clone the repository
+# Clone and setup
 git clone https://github.com/zanesense/netprobe.git
 cd netprobe
-
-# Install dependencies
 npm install
+
+# Configure environment
+cp .env.example .env
+# Add your Firebase configuration
 
 # Start development server
 npm run dev
 ```
 
-🎉 Open [http://localhost:8080](http://localhost:8080) and start scanning!
+### **Tech Stack**
+- **Frontend**: React 18 + TypeScript + Tailwind CSS
+- **Backend**: Firebase (Auth + Firestore)
+- **Build**: Vite for fast development and production builds
+- **UI**: shadcn/ui components with Framer Motion animations
 
-### Production Build
-
-```bash
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
-```
-
----
-
-## 🔧 Usage
-
-### Basic Port Scan
-```bash
-1. Enter target: 192.168.1.1 or example.com
-2. Set port range: 1-1000
-3. Choose scan type: TCP Connect
-4. Click "Start Scan" 🚀
-```
-
-### Advanced Features
-- **Host Discovery**: `Discovery` tab → Select methods → Start
-- **Service Detection**: `Services` tab → Detect after port scan
-- **OS Fingerprinting**: `OS/Device` tab → Analyze target system
-- **Script Scanning**: `Scripts` tab → Run security checks
-- **Firewall Analysis**: `Firewall` tab → Detect filtering
-
----
-
-## 🏗️ Architecture
-
-<div align="center">
-
-```mermaid
-graph TB
-    A[React Frontend] --> B[Network Scanner Engine]
-    B --> C[Port Scanner]
-    B --> D[Service Detector]
-    B --> E[OS Fingerprinter]
-    B --> F[Host Discovery]
-    
-    C --> G[TCP Connect]
-    C --> H[WebSocket Probes]
-    C --> I[HTTP Requests]
-    
-    D --> J[Banner Grabbing]
-    D --> K[Header Analysis]
-    
-    E --> L[TTL Analysis]
-    E --> M[HTTP Signatures]
-    E --> N[Service Patterns]
-```
-
-</div>
-
-### Tech Stack
-
-| Category | Technology | Purpose |
-|----------|------------|---------|
-| **Frontend** | React 18 + TypeScript | Modern UI framework |
-| **Styling** | Tailwind CSS + shadcn/ui | Responsive design system |
-| **Animation** | Framer Motion | Smooth transitions |
-| **Build** | Vite | Fast development & building |
-| **Scanning** | Custom Engine | Real network operations |
-| **State** | React Hooks | Efficient state management |
+### **Architecture**
+- **Browser-based scanning** within security constraints
+- **Real-time WebSocket** connections for port testing
+- **Firebase integration** for authentication and data storage
+- **Responsive design** for desktop and mobile use
 
 ---
 
 ## 🌐 Browser Limitations
 
-NetProbe operates within browser security constraints while maximizing scanning capabilities:
+NetProbe operates within browser security constraints:
 
-### ✅ **Supported Features**
+### ✅ **What Works**
 - HTTP/HTTPS port detection
-- WebSocket connection testing
+- WebSocket connection testing  
 - Service banner grabbing
-- Basic host reachability
-- Connection timing analysis
+- Basic connectivity testing
+- DNS resolution
 
 ### ⚠️ **Browser Restrictions**
-- Raw socket access (SYN/ACK scans)
+- Raw socket access (true SYN/ACK scans)
 - ICMP ping operations
 - Comprehensive UDP scanning
 - Network interface enumeration
 
-> 💡 **Pro Tip**: For advanced scanning, use native tools like [Nmap](https://nmap.org/) alongside NetProbe
-
----
-
-## ⚙️ Configuration
-
-### Environment Variables
-```bash
-# Optional: Custom API endpoints
-VITE_API_BASE_URL=https://api.netprobe.dev
-VITE_ENABLE_ANALYTICS=false
-```
-
-### Settings Panel
-Access via `Settings` tab or `⌘K` → "Settings":
-
-- **Scan Preferences**: Timeout, concurrency, default scan types
-- **UI Options**: Animations, notifications, themes
-- **Security**: Compliance notices, audit logging
-- **Export**: Default formats, auto-save options
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! Here's how to get started:
-
-### Development Setup
-```bash
-# Fork and clone the repo
-git clone https://github.com/zanesense/netprobe.git
-
-# Create feature branch
-git checkout -b feature/amazing-feature
-
-# Make changes and test
-npm run dev
-npm run build
-
-# Commit and push
-git commit -m "Add amazing feature"
-git push origin feature/amazing-feature
-```
-
-### Contribution Guidelines
-- 🧪 **Testing**: Add tests for new features
-- 📝 **Documentation**: Update docs for API changes
-- 🎨 **Code Style**: Follow existing patterns
-- 🔒 **Security**: Consider security implications
-- ⚡ **Performance**: Optimize for speed and memory
-
----
-
-## 📊 Project Stats
-
-<div align="center">
-
-![GitHub stars](https://img.shields.io/github/stars/zanesense/netprobe?style=social)
-![GitHub forks](https://img.shields.io/github/forks/zanesense/netprobe?style=social)
-![GitHub issues](https://img.shields.io/github/issues/zanesense/netprobe)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/zanesense/netprobe)
-
-![Lines of code](https://img.shields.io/tokei/lines/github/zanesense/netprobe)
-![Code size](https://img.shields.io/github/languages/code-size/zanesense/netprobe)
-![Repo size](https://img.shields.io/github/repo-size/zanesense/netprobe)
-
-</div>
-
----
-
-## 🔒 Security & Legal
-
-### ⚖️ **Legal Notice**
-**IMPORTANT**: NetProbe is designed for authorized security testing only. Users must:
-- Own the target systems OR have explicit written permission
-- Comply with local laws and regulations
-- Use responsibly for legitimate security purposes
-
-### 🛡️ **Security Features**
-- **Safe Operations**: Read-only scanning, no exploitation
-- **Audit Trail**: Complete logging of all activities
-- **Compliance**: Built-in legal notices and consent
-- **Rate Limiting**: Prevents overwhelming target systems
-
-### 🚨 **Responsible Disclosure**
-Found a security issue? Please email: saimzonic@proton.me
+> 💡 **Note**: For advanced scanning, use native tools like Nmap alongside NetProbe
 
 ---
 
@@ -260,19 +149,13 @@ Found a security issue? Please email: saimzonic@proton.me
 
 This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
 
-```
-MIT License - Copyright (c) 2025 NetProbe
-Permission is hereby granted, free of charge, to any person obtaining a copy...
-```
-
 ---
 
 ## 🙏 Acknowledgments
 
 - **[Nmap](https://nmap.org/)** - Inspiration for scanning techniques
+- **[Firebase](https://firebase.google.com/)** - Authentication and data storage
 - **[shadcn/ui](https://ui.shadcn.com/)** - Beautiful UI components
-- **[Tailwind CSS](https://tailwindcss.com/)** - Utility-first CSS framework
-- **[React](https://reactjs.org/)** - The library that powers our UI
 - **Security Community** - For responsible disclosure practices
 
 ---
@@ -281,6 +164,6 @@ Permission is hereby granted, free of charge, to any person obtaining a copy...
 
 **⭐ Star this repo if NetProbe helped you! ⭐**
 
-Made with ❤️ by zanesense.
+Made with ❤️ for the security community.
 
 </div>

@@ -10,13 +10,16 @@ import {
   Palette,
   Save,
   RotateCcw,
-  Info
+  Info,
+  AlertTriangle,
+  RefreshCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { resetDismissedAlerts } from "@/components/ui/dismissible-alert";
 import { toast } from "sonner";
 
 interface SettingsProps {
@@ -100,6 +103,11 @@ export function Settings({ onSettingsChange }: SettingsProps) {
     localStorage.removeItem('netprobe-compliance-accepted');
     updateSetting('showComplianceNotice', true);
     toast.info("Compliance notice will be shown on next startup");
+  };
+
+  const resetDismissedAlertsHandler = () => {
+    resetDismissedAlerts();
+    toast.success("All dismissed alerts have been reset and will be shown again");
   };
 
   return (
@@ -353,6 +361,19 @@ export function Settings({ onSettingsChange }: SettingsProps) {
             </div>
             <Button variant="outline" size="sm" onClick={clearComplianceFlag}>
               Reset
+            </Button>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="text-sm font-medium">Reset Dismissed Alerts</label>
+              <p className="text-xs text-muted-foreground">
+                Show all previously dismissed warning alerts again
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={resetDismissedAlertsHandler}>
+              <RefreshCw className="h-3 w-3 mr-1" />
+              Reset Alerts
             </Button>
           </div>
         </div>

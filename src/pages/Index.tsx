@@ -6,6 +6,7 @@ import { AuthorizationModal } from "@/components/scanner/AuthorizationModal";
 import { CommandPalette } from "@/components/scanner/CommandPalette";
 import { BrowserLimitations } from "@/components/scanner/BrowserLimitations";
 import { HostDiscovery } from "@/components/scanner/HostDiscovery";
+import { HostnameResolver } from "@/components/scanner/HostnameResolver";
 import { TargetInput } from "@/components/scanner/TargetInput";
 import { PortRangeSelector } from "@/components/scanner/PortRangeSelector";
 import { ScanTypeSelector } from "@/components/scanner/ScanTypeSelector";
@@ -18,9 +19,13 @@ import { OSFingerprint } from "@/components/scanner/OSFingerprint";
 import { ScriptRunner } from "@/components/scanner/ScriptRunner";
 import { FirewallDetection } from "@/components/scanner/FirewallDetection";
 import { ReportsPanel } from "@/components/scanner/ReportsPanel";
+import { SavedScans } from "@/components/scanner/SavedScans";
 import { Settings, AppSettings } from "@/components/scanner/Settings";
+import { Footer } from "@/components/ui/footer";
 import { Button } from "@/components/ui/button";
+import { AuthModal } from "@/components/auth/AuthModal";
 import { useRealNetworkScanner } from "@/hooks/useRealNetworkScanner";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { ServiceInfo, Host, ScriptResult, FirewallInfo, ScanResult } from "@/types/scanner";
 
@@ -28,6 +33,7 @@ const Index = () => {
   const [authorized, setAuthorized] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [showFirebaseAuth, setShowFirebaseAuth] = useState(false);
   const [activeTab, setActiveTab] = useState("discovery");
   const [target, setTarget] = useState("");
   const [startPort, setStartPort] = useState(1);
@@ -42,7 +48,8 @@ const Index = () => {
   const [firewallInfo, setFirewallInfo] = useState<FirewallInfo | null>(null);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
 
-  const { isScanning, phase, progress, currentPort, elapsedTime, discoveredHosts, portResults, logs, history, realHostDiscovery, realPortScan, stopScan, clearHistory, detectServices, fingerprintOS, runScripts, analyzeFirewall, getAvailableScripts, getScriptsForPorts } = useRealNetworkScanner();
+  const { user, userProfile } = useAuth();
+  const { isScanning, phase, progress, currentPort, elapsedTime, discoveredHosts, portResults, logs, history, realHostDiscovery, realPortScan, stopScan, clearHistory, detectServices, fingerprintOS, runScripts, analyzeFirewall, getAvailableScripts } = useRealNetworkScanner();
 
   // Check compliance status on mount
   useEffect(() => {
@@ -74,7 +81,7 @@ const Index = () => {
     } else {
       setShowAuthModal(true);
     }
-  }, [appSettings]);
+  }, []);
 
   const handleComplianceAccept = () => {
     localStorage.setItem('netprobe-compliance-accepted', 'true');
@@ -228,8 +235,15 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background grid-pattern">
-      <DashboardHeader activeTab={activeTab} onTabChange={setActiveTab} currentPhase={phase} onOpenCommandPalette={() => setShowCommandPalette(true)} />
+      <DashboardHeader 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab} 
+        currentPhase={phase} 
+        onOpenCommandPalette={() => setShowCommandPalette(true)}
+        onOpenAuth={() => setShowFirebaseAuth(true)}
+      />
       <CommandPalette isOpen={showCommandPalette} onClose={() => setShowCommandPalette(false)} onAction={handleCommandAction} />
+      <AuthModal isOpen={showFirebaseAuth} onClose={() => setShowFirebaseAuth(false)} />
 
       <main className="container mx-auto px-4 py-8">
         <BrowserLimitations />
@@ -238,6 +252,10 @@ const Index = () => {
           <div className="space-y-6">
             {activeTab === "discovery" && (
               <HostDiscovery isScanning={isScanning && phase === "discovery"} hosts={discoveredHosts} onStartDiscovery={realHostDiscovery} onStopDiscovery={stopScan} />
+            )}
+
+            {activeTab === "resolver" && (
+              <HostnameResolver />
             )}
 
             {activeTab === "ports" && (
@@ -306,6 +324,25 @@ const Index = () => {
               />
             )}
 
+            {activeTab === "saved" && (
+              <SavedScans 
+                onViewScan={(scan) => {
+                  // TODO: Implement scan viewing functionality
+                  toast.info(`Viewing scan for ${scan.target}`);
+                }}
+                onLoadScan={(scan) => {
+                  // Load scan data into current state
+                  setTarget(scan.target);
+                  // Note: portResults comes from useRealNetworkScanner hook
+                  // We would need to add a method to load scan data into the scanner
+                  setServices(scan.services);
+                  setHosts(scan.hosts);
+                  setActiveTab("ports");
+                  toast.success(`Loaded scan data for ${scan.target}`);
+                }}
+              />
+            )}
+
             {activeTab === "reports" && (
               <ReportsPanel 
                 scanResult={scanResult} 
@@ -336,6 +373,8 @@ const Index = () => {
           </motion.aside>
         </div>
       </main>
+
+      <Footer />
     </div>
   );
 };

@@ -16,6 +16,7 @@ import {
   Trash2,
   History,
   HelpCircle,
+  Globe,
 } from "lucide-react";
 
 interface CommandPaletteProps {
@@ -42,6 +43,7 @@ const COMMANDS: CommandItem[] = [
   
   // Navigation
   { id: "nav-discovery", label: "Go to Discovery", icon: <Network className="h-4 w-4" />, category: "Navigate" },
+  { id: "nav-resolver", label: "Go to DNS Resolver", icon: <Globe className="h-4 w-4" />, category: "Navigate" },
   { id: "nav-ports", label: "Go to Port Scan", icon: <ScanLine className="h-4 w-4" />, category: "Navigate" },
   { id: "nav-services", label: "Go to Services", icon: <Search className="h-4 w-4" />, category: "Navigate" },
   { id: "nav-fingerprint", label: "Go to OS Detection", icon: <Fingerprint className="h-4 w-4" />, category: "Navigate" },

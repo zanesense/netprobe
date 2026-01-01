@@ -1,13 +1,17 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { DiscoveredHost, PortResult, LogEntry, ScanPhase, DiscoveryMethod, ScanHistoryEntry, ServiceInfo, Host, ScriptResult, FirewallInfo } from "@/types/scanner";
 import { networkScanner, PortScanResult, HostDiscoveryResult } from "@/lib/network-scanner";
 import { OSFingerprintEngine, OSFingerprint } from "@/lib/os-fingerprinting";
 import { AdvancedServiceDetector, DetectedService } from "@/lib/advanced-service-detection";
 import { ScriptEngine, SecurityScript, SECURITY_SCRIPTS } from "@/lib/script-engine";
 import { FirewallDetector, FirewallAnalysis } from "@/lib/firewall-detection";
+import { FirebaseScanStorage } from "@/lib/firebase-storage";
 import { generateId, parseTarget } from "@/lib/scanner-utils";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 export function useRealNetworkScanner() {
+  const { user, userProfile } = useAuth();
   const [isScanning, setIsScanning] = useState(false);
   const [phase, setPhase] = useState<ScanPhase>("idle");
   const [progress, setProgress] = useState(0);
@@ -17,9 +21,99 @@ export function useRealNetworkScanner() {
   const [portResults, setPortResults] = useState<PortResult[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [history, setHistory] = useState<ScanHistoryEntry[]>([]);
+  const [currentScanId, setCurrentScanId] = useState<string | null>(null);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number>(0);
+  const scanSettingsRef = useRef<{
+    startPort: number;
+    endPort: number;
+    timeout: number;
+    concurrency: number;
+  }>({ startPort: 1, endPort: 1000, timeout: 3000, concurrency: 20 });
+
+  // Load scan history from Firebase on mount
+  const loadScanHistory = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      const firestoreHistory = await FirebaseScanStorage.getUserScanHistory(user.uid);
+      setHistory(firestoreHistory);
+    } catch (error) {
+      console.error('Failed to load scan history:', error);
+      // Continue with empty history if Firebase fails
+    }
+  }, [user]);
+
+  // Save scan result to Firebase
+  const saveScanResult = useCallback(async (
+    target: string,
+    scanType: string,
+    startTime: Date,
+    endTime: Date,
+    duration: number,
+    hosts: Host[],
+    ports: PortResult[],
+    services: ServiceInfo[]
+  ) => {
+    if (!user || !userProfile?.preferences.autoSave) return null;
+
+    try {
+      const scanResult = {
+        id: generateId(),
+        target,
+        scanType,
+        startTime,
+        endTime,
+        duration,
+        hosts,
+        ports,
+        services,
+        findings: services.filter(s => !s.secure).map(s => ({
+          title: `Unencrypted ${s.name} service`,
+          description: `Port ${s.port} is running ${s.name} without encryption`,
+          severity: "low" as const,
+          remediation: "Consider using TLS/SSL encryption"
+        }))
+      };
+
+      const scanId = await FirebaseScanStorage.saveScanResult(
+        user.uid,
+        scanResult,
+        scanSettingsRef.current
+      );
+
+      // Update user scan statistics
+      const newScansPerformed = (userProfile.usage.scansPerformed || 0) + 1;
+      const newTotalScanTime = (userProfile.usage.totalScanTime || 0) + duration;
+      
+      await FirebaseScanStorage.updateUserScanStats(
+        user.uid,
+        newScansPerformed,
+        newTotalScanTime,
+        endTime
+      );
+
+      toast.success('Scan results saved to your account');
+      return scanId;
+    } catch (error) {
+      console.error('Failed to save scan result:', error);
+      toast.error('Failed to save scan results');
+      return null;
+    }
+  }, [user, userProfile]);
+
+  // Save scan history entry to Firebase
+  const saveScanHistory = useCallback(async (historyEntry: ScanHistoryEntry) => {
+    if (!user) return;
+
+    try {
+      await FirebaseScanStorage.saveScanHistory(user.uid, historyEntry);
+    } catch (error) {
+      console.error('Failed to save scan history:', error);
+      // Don't show error to user for history save failure
+    }
+  }, [user]);
 
   const addLog = useCallback((message: string, level: LogEntry["level"] = "info") => {
     setLogs((prev) => [...prev, { 
@@ -67,7 +161,10 @@ export function useRealNetworkScanner() {
 
       // For CIDR ranges, we'll scan multiple hosts
       // For single hosts, we'll just verify the target
-      const hosts = await networkScanner.discoverHosts(target, methods);
+      const hosts = await networkScanner.discoverHosts(target, methods, {
+        onLog: addLog,
+        onProgress: setProgress
+      });
       
       const discoveredHostsData: DiscoveredHost[] = hosts.map((host: HostDiscoveryResult) => ({
         id: generateId(),
@@ -77,7 +174,7 @@ export function useRealNetworkScanner() {
         vendor: host.vendor,
         method: host.method as DiscoveryMethod,
         latency: host.latency,
-        ttl: host.ttl,
+        ttl: host.ttl || 64,
         isAlive: host.isAlive,
         discoveredAt: host.timestamp,
       }));
@@ -88,7 +185,7 @@ export function useRealNetworkScanner() {
       if (discoveredHostsData.length > 0) {
         addLog(`Discovery complete: ${discoveredHostsData.length} hosts found`, "success");
       } else {
-        addLog("No hosts discovered - target may be unreachable", "warning");
+        addLog("No hosts discovered - targets may be unreachable or filtered", "warning");
       }
       
       setPhase("complete");
@@ -153,11 +250,44 @@ export function useRealNetworkScanner() {
         }
       });
 
+      // Store scan settings for Firebase saving
+      scanSettingsRef.current = {
+        startPort,
+        endPort,
+        timeout: 3000,
+        concurrency: 20
+      };
+
       const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
       const openPorts = results.filter(r => r.status === 'open').length;
       
       addLog(`Scan completed in ${duration}s`, "success");
       addLog(`Found ${openPorts} open ports out of ${endPort - startPort + 1} scanned`, "info");
+      
+      // Create hosts data for saving
+      const hosts: Host[] = [{
+        ip: target,
+        hostname: target,
+        status: 'up' as const,
+        ports: results.filter(r => r.status === 'open'),
+        osInfo: undefined
+      }];
+
+      // Save scan result to Firebase if user is authenticated and auto-save is enabled
+      const scanId = await saveScanResult(
+        target,
+        scanType,
+        new Date(startTimeRef.current),
+        new Date(),
+        duration * 1000, // Convert to milliseconds
+        hosts,
+        results,
+        [] // services will be populated later if service detection is run
+      );
+
+      if (scanId) {
+        setCurrentScanId(scanId);
+      }
       
       // Add to history
       const historyEntry: ScanHistoryEntry = {
@@ -178,6 +308,8 @@ export function useRealNetworkScanner() {
         status: "completed"
       };
       
+      // Save to Firebase and local state
+      await saveScanHistory(historyEntry);
       setHistory(prev => [historyEntry, ...prev.slice(0, 9)]);
       setPhase("complete");
       
@@ -188,7 +320,7 @@ export function useRealNetworkScanner() {
       setIsScanning(false);
       stopTimer();
     }
-  }, [addLog, startTimer, stopTimer]);
+  }, [addLog, startTimer, stopTimer, saveScanResult, saveScanHistory]);
 
   const stopScan = useCallback(() => {
     networkScanner.stopScan();
@@ -198,9 +330,18 @@ export function useRealNetworkScanner() {
     stopTimer();
   }, [addLog, stopTimer]);
 
-  const clearHistory = useCallback(() => {
+  const clearHistory = useCallback(async () => {
+    if (user) {
+      try {
+        await FirebaseScanStorage.clearUserScanHistory(user.uid);
+        toast.success('Scan history cleared');
+      } catch (error) {
+        console.error('Failed to clear Firebase history:', error);
+        toast.error('Failed to clear scan history');
+      }
+    }
     setHistory([]);
-  }, []);
+  }, [user]);
 
   // Advanced service detection using real techniques
   const detectServices = useCallback(async (target: string) => {
@@ -396,6 +537,15 @@ export function useRealNetworkScanner() {
     
     return applicableScripts;
   }, []);
+
+  // Load scan history when user changes
+  useEffect(() => {
+    if (user) {
+      loadScanHistory();
+    } else {
+      setHistory([]);
+    }
+  }, [user, loadScanHistory]);
 
   return {
     isScanning,

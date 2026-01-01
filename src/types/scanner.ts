@@ -175,6 +175,9 @@ export interface ScriptFinding {
   description: string;
   severity: ScanSeverity;
   remediation?: string;
+  references?: string[];
+  cvss?: number;
+  cve?: string;
 }
 
 // Firewall Detection
