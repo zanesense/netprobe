@@ -9,7 +9,7 @@
 [![React](https://img.shields.io/badge/React-20232A?logo=react&logoColor=61DAFB)](https://reactjs.org/)
 [![Firebase](https://img.shields.io/badge/Firebase-FFCA28?logo=firebase&logoColor=black)](https://firebase.google.com/)
 
-[🚀 Live Demo](https://netprobe-two.vercel.app) • [📖 Documentation](.docs/) • [🐛 Report Issues](https://github.com/zanesense/netprobe/issues)
+[🚀 Live Demo](https://netprobe.zanesense.dev) • [📖 Documentation](.docs/) • [🐛 Report Issues](https://github.com/zanesense/netprobe/issues)
 
 </div>
 
